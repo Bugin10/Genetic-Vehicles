@@ -140,16 +140,16 @@ for (j = 0; j < 20; j++) {
         collisionFilter: {
             group: 'ok'
         },
-        friction: 0.45,
-        density: 1
+        friction: 0.25,
+        density: 0.9
     });
 
     var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, wheelSize, {
         collisionFilter: {
             group: 'ok'
         },
-        friction: 0.45,
-        density: 1
+        friction: 0.25,
+        density: 0.9
     });
 
     var axelA = Constraint.create({
@@ -199,6 +199,8 @@ Engine.run(engine);
 // run the renderer
 Render.run(render);
 
+linebreak = document.createElement("br");
+document.body.appendChild(linebreak);
 
 var minimapCanvas = document.createElement('canvas'),
     ctx = minimapCanvas.getContext('2d');
@@ -206,6 +208,48 @@ minimapCanvas.width = 450;
 minimapCanvas.height = 250;
 minimapCanvas.id = "minimapCanvas";
 document.body.appendChild(minimapCanvas);
+
+
+
+var healthDisplay = document.createElement('canvas'),
+    cth = healthDisplay.getContext('2d');
+healthDisplay.width = 450;
+healthDisplay.height = 250;
+healthDisplay.id = "healthDisplay";
+document.body.appendChild(healthDisplay);
+
+
+
+function DisplayHealth() {
+    cth.lineWidth = 1;
+    cth.strokeStyle = 'black';
+    cth.beginPath();
+    var xOff = healthDisplay.width - 1;
+    var yOff = 1;
+    var size = 450;
+    var scale = size / engine.width;
+    cth.fillStyle = 'white'
+    cth.rect(10, yOff, 299, 239);
+    cth.stroke();
+    cth.fill();
+
+
+    for (h = 0; h < 20; h++) {
+        if (carHealth[h] <= 0) {
+            cth.strokeStyle = 'black'
+        }
+        else {
+            cth.strokeStyle = 'green'
+        }
+        cth.beginPath();
+        cth.lineWidth = 15
+
+        cth.moveTo(17 + (h * 15), healthDisplay.height - 10);
+        cth.lineTo(17 + (h * 15), (1000 - carHealth[h]) / 4.2 +1 );
+        cth.stroke();
+        cth.closePath();
+    }
+}
 
 
 function Minimap(hero) {
@@ -255,7 +299,7 @@ function Minimap(hero) {
         }
         ctx.beginPath();
 
-        ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 0);
+        ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 1);
         ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 240);
         ctx.stroke();
         ctx.closePath();
@@ -268,17 +312,16 @@ function Minimap(hero) {
     window.requestAnimationFrame(run);
 
     for (i = 0; i < carArray.length; i++) {
-        Body.setAngularVelocity(carArray[i].bodies[1], 0.6);
-        Body.setAngularVelocity(carArray[i].bodies[2], 0.6);
+        if (carHealth[i] > 0) {
+            Body.setAngularVelocity(carArray[i].bodies[1], 0.4);
+            Body.setAngularVelocity(carArray[i].bodies[2], 0.4);
+        }
     }
-
-    //
-    // var hero = boxA;
 
     for (i = 0; i < 20; i++) {
         if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 4) && (carHealth[i] > 0)) {
             carHealth[i] -= 3;
-           // console.log(carHealth)
+
         }
         else if (carHealth[i] > 0) {
             carHealth[i] = 1000
@@ -288,27 +331,20 @@ function Minimap(hero) {
             for (j = 0; j < carArray[i].bodies.length; j++) {
                 carArray[i].bodies[j].render.fillStyle = '#333'
             }
-        //    for(j =0;k<ca)
-        
         }
-
-
     }
-
-
 
 
     var hero = carArray[0]
     for (i = 0; i < 20; i++) {
-        if (carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) {
+        if ((carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             hero = carArray[i]
         }
         if (maxXArray[i] < carArray[i].bodies[0].bounds.max.x) {
             maxXArray[i] = carArray[i].bodies[0].bounds.max.x;
         }
+    
     }
-
-
 
 
     diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 600) / 20
@@ -323,4 +359,5 @@ function Minimap(hero) {
     // // Update Mouse
     Mouse.setOffset(mouseConstraint.mouse, render.bounds.min);
     Minimap(hero);
+    DisplayHealth();
 })();
