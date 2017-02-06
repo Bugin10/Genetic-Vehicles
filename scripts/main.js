@@ -22,13 +22,13 @@ var render = Render.create({
     element: document.body,
     engine: engine,
     options: {
-        showAngleIndicator: true,
+        showAngleIndicator: false,
         showShadows: true,
-        wireframes: true,
+        wireframes: false,
         width: 1400,
         height: 800,
         hasBounds: true,
-        showBounds: true,
+        showBounds: false,
         showCollisions: true,
         showConstraints: true,
         showVertexNumber: true,
@@ -55,129 +55,9 @@ engine.positionIterations = 10;
 
 
 // create two boxes and a ground
-var boxA = Bodies.circle(600, 200, 80, 80);
-boxA.friction = 0.15;
-var boxB = Bodies.circle(800, 200, 80, 80);
-boxB.friction = 0.15;
-
-// function carMaker(xx, yy, width, height, wheelSize) {
-//     var group = Body.nextGroup(true),
-//         wheelBase = -20,
-//         wheelAOffset = -width * 0.5 + wheelBase,
-//         wheelBOffset = width * 0.5 - wheelBase,
-//         wheelYOffset = 0;
-
-//     var car = Composite.create({ label: 'Car' }),
-//         body = Bodies.trapezoid(xx, yy, width, height, 0.3, {
-//             collisionFilter: {
-//                 group: group
-//             },
-//             friction: 0.01,
-//             chamfer: {
-//                 radius: 10
-//             }
-//         });
-
-//     var wheelA = Bodies.circle(xx + wheelAOffset, yy + wheelYOffset, wheelSize, {
-//         collisionFilter: {
-//             group: group
-//         },
-//         friction: 0.8,
-//         density: 0.01
-//     });
-
-//     var wheelB = Bodies.circle(xx + wheelBOffset, yy + wheelYOffset, wheelSize, {
-//         collisionFilter: {
-//             group: group
-//         },
-//         friction: 0.8,
-//         density: 0.01
-//     });
-
-//     var axelA = Constraint.create({
-//         bodyA: body,
-//         pointA: { x: wheelAOffset, y: wheelYOffset },
-//         bodyB: wheelA,
-//         stiffness: 0.35
-//     });
-
-//     var axelB = Constraint.create({
-//         bodyA: body,
-//         pointA: { x: wheelBOffset, y: wheelYOffset },
-//         bodyB: wheelB,
-//         stiffness: 0.35
-//     });
-
-//     Composite.addBody(car, body);
-//     Composite.addBody(car, wheelA);
-//     Composite.addBody(car, wheelB);
-//     Composite.addConstraint(car, axelA);
-//     Composite.addConstraint(car, axelB);
-
-//     return car;
-// };
-
-// function carMaker(xx, yy, width, height, wheelSize) {
-//     var group = Body.nextGroup(true),
-//         wheelBase = -20,
-//         wheelAOffset = -width * 0.5 + wheelBase,
-//         wheelBOffset = width * 0.5 - wheelBase,
-//         wheelYOffset = 0;
 
 
 
-
-//     var car = Composite.create({ label: 'Car' }),
-//         body = Bodies.trapezoid(xx, yy, width, height, 0.3, {
-//             collisionFilter: {
-//                 group: group
-//             },
-//             friction: 0.01,
-//             chamfer: {
-//                 radius: 10
-//             }
-//         });
-
-//     var wheelA = Bodies.circle(xx + wheelAOffset, yy + wheelYOffset, wheelSize, {
-//         collisionFilter: {
-//             group: group
-//         },
-//         friction: 0.8,
-//         density: 0.01
-//     });
-
-//     var wheelB = Bodies.circle(xx + wheelBOffset, yy + wheelYOffset, wheelSize, {
-//         collisionFilter: {
-//             group: group
-//         },
-//         friction: 0.8,
-//         density: 0.01
-//     });
-
-//     var axelA = Constraint.create({
-//         bodyA: body,
-//         pointA: { x: wheelAOffset, y: wheelYOffset },
-//         bodyB: wheelA,
-//         stiffness: 0.35
-//     });
-
-//     var axelB = Constraint.create({
-//         bodyA: body,
-//         pointA: { x: wheelBOffset, y: wheelYOffset },
-//         bodyB: wheelB,
-//         stiffness: 0.35
-//     });
-
-//     Composite.addBody(car, body);
-//     Composite.addBody(car, wheelA);
-//     Composite.addBody(car, wheelB);
-//     Composite.addConstraint(car, axelA);
-//     Composite.addConstraint(car, axelB);
-
-//     return car;
-// };
-
-//World.add(engine.world, carMaker(300, 0, 50, 50, 30));
 
 function generateGround() {
 
@@ -196,14 +76,14 @@ function generateGround() {
 
     var average = 0;
     floorTiles = [];
-    for (i = 0; i < 1000; i++) {
+    for (i = 0; i < 500; i++) {
 
         floorTiles[i] = Composite.create();
-        var nextGroundTile = Bodies.rectangle(previousTileBounds.x + 30, previousTileBounds.y, 80, 20,
+        var nextGroundTile = Bodies.rectangle(previousTileBounds.x + 60, previousTileBounds.y, 150, 20,
             { isStatic: true, friction: 1, chamfer: { radius: 9 } });
         Composite.add(floorTiles[i], nextGroundTile);
 
-        var rand = Math.random() * ((i + 0.001) / 500.0) + (0.5 - (i / 1000));
+        var rand = Math.random() * ((i + 0.001) / 125) + (0.5 - (i / 250));
         if (rand > 1) {
             rand = 0.9;
         }
@@ -228,17 +108,10 @@ function generateGround() {
 };
 
 var floorTiles = generateGround();
-World.add(engine.world, Constraint.create({ bodyA: boxA, bodyB: boxB }));
-// World.add(engine.world, Constraint.create({bodyA: boxA, bodyB: boxB}));
-World.add(engine.world, Axes.fromVertices(boxA.vertices[1]));
 
-//console.log(ground1.position.y, rand);
-//World.add(engine.world, Composites.car(150, 100, 100 * 1, 40 * 1, 60 * 1));
-// add all of the bodies to the world
-World.add(engine.world, [boxA, boxB]);
 
 carArray = [];
-for (j = 0; j < 2; j++) {
+for (j = 0; j < 20; j++) {
     var vertexArray = [];
     wheelBase = -20,
         wheelAOffset = 0,
@@ -246,32 +119,37 @@ for (j = 0; j < 2; j++) {
         wheelYOffset = 0,
         wheelSize = 50;
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 15; i++) {
         vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
     }
     vertexArray = Vertices.clockwiseSort(vertexArray);
-    var temp = Bodies.fromVertices(350, -100, vertexArray, {
+    var temp = Bodies.fromVertices(500, 0, vertexArray, {
         collisionFilter: {
             group: 'ok'
-        }
+        },
+        density: 1,
+        driction: 0.15
     }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
+    if (temp.vertices.length <= 4) {
+        j--
+        continue
+    }
 
-    console.log(temp.vertices);
 
     var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, wheelSize, {
         collisionFilter: {
             group: 'ok'
         },
-        friction: 0.2,
-        density: 0.0001
+        friction: 0.45,
+        density: 1
     });
 
     var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, wheelSize, {
         collisionFilter: {
             group: 'ok'
         },
-        friction: 0.2,
-        density: 0.0001
+        friction: 0.45,
+        density: 1
     });
 
     var axelA = Constraint.create({
@@ -298,12 +176,29 @@ for (j = 0; j < 2; j++) {
 }
 
 
+
+// ------------------------- Initialisation--------------------------//
+render.bounds.min.x = carArray[0].bodies[0].bounds.min.x - 700;
+render.bounds.max.x = carArray[0].bodies[0].bounds.min.x + 700;
+
+render.bounds.min.y = carArray[0].bodies[0].bounds.min.y - 400;
+render.bounds.max.y = carArray[0].bodies[0].bounds.min.y + 400;
+
+maxXArray = [];
+carHealth = []
+currentAlive = 20
+for (i = 0; i < 20; i++) {
+    maxXArray[i] = -10000000
+    carHealth[i] = 1000
+}
+
+
+console.log(carArray[0])
 // run the engine
 Engine.run(engine);
-
 // run the renderer
-
 Render.run(render);
+
 
 var minimapCanvas = document.createElement('canvas'),
     ctx = minimapCanvas.getContext('2d');
@@ -312,7 +207,8 @@ minimapCanvas.height = 250;
 minimapCanvas.id = "minimapCanvas";
 document.body.appendChild(minimapCanvas);
 
-function Minimap() {
+
+function Minimap(hero) {
     //  var ctx = document.getElementById("minimapCanvas").getContext("2d");
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'black';
@@ -327,15 +223,14 @@ function Minimap() {
     ctx.fill();
 
     ctx.fillStyle = 'red';
-    ctx.fillRect(boxA.position.x / floorTiles[999].bodies[0].bounds.max.x * size - 3, (boxA.position.y / 50 + 125) - 3, 5, 5);
+    ctx.fillRect(hero.bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size - 3, (hero.bodies[0].position.y / 50 + 125) - 3, 5, 5);
     ctx.fillStyle = 'black';
     ctx.closePath();
 
     ctx.beginPath();
     ctx.strokeStyle = 'black';
-    // ctx.moveTo(floorTiles[0].bodies[0].bounds.min.x,floorTiles[0].bodies[0].bounds.min.y );
 
-    for (i = 0; i < 1000; i++) {
+    for (i = 0; i < 500; i++) {
         if (floorTiles[i].bodies[0].angle > Math.pi) {
             var tileRighty = floorTiles[i].bodies[0].bounds.max.y;
             var tileLefty = floorTiles[i].bodies[0].bounds.min.y;
@@ -345,33 +240,87 @@ function Minimap() {
             var tileLefty = floorTiles[i].bodies[0].bounds.max.y;
         }
 
-        ctx.lineTo(floorTiles[i].bodies[0].bounds.min.x / floorTiles[999].bodies[0].bounds.max.x * size, floorTiles[i].bodies[0].bounds.min.y / 50 + 125);
-        // ctx.fillRect(floorTiles[i].bodies[0].position.x / floorTiles[99].bodies[0].bounds.max.x * 320, tileRighty / 25 + 125, 3, 3);
+        ctx.lineTo(floorTiles[i].bodies[0].bounds.min.x / floorTiles[499].bodies[0].bounds.max.x * size, floorTiles[i].bodies[0].bounds.min.y / 50 + 125);
+
     }
     ctx.stroke();
+    ctx.closePath();
+
+    for (h = 0; h < 20; h++) {
+        if (carHealth[h] <= 0) {
+            ctx.strokeStyle = 'black'
+        }
+        else {
+            ctx.strokeStyle = 'gold'
+        }
+        ctx.beginPath();
+
+        ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 0);
+        ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 240);
+        ctx.stroke();
+        ctx.closePath();
+    }
 }
 
 
 (function run() {
 
     window.requestAnimationFrame(run);
-    Body.setAngularVelocity(boxA, Math.PI * 0.0);
-    Body.setAngularVelocity(boxB, Math.PI * 0.0);
 
     for (i = 0; i < carArray.length; i++) {
-        Body.setAngularVelocity(carArray[i].bodies[1], 0.1);
-        Body.setAngularVelocity(carArray[i].bodies[2], 0.1);
+        Body.setAngularVelocity(carArray[i].bodies[1], 0.6);
+        Body.setAngularVelocity(carArray[i].bodies[2], 0.6);
     }
 
     //
     // var hero = boxA;
-    render.bounds.min.x = boxA.bounds.min.x - 700;
-    render.bounds.max.x = boxA.bounds.min.x + 700;
 
-    render.bounds.min.y = boxA.bounds.min.y - 400;
-    render.bounds.max.y = boxA.bounds.min.y + 400;
+    for (i = 0; i < 20; i++) {
+        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 4) && (carHealth[i] > 0)) {
+            carHealth[i] -= 3;
+           // console.log(carHealth)
+        }
+        else if (carHealth[i] > 0) {
+            carHealth[i] = 1000
+        }
+
+        if (carHealth[i] <= 0) {
+            for (j = 0; j < carArray[i].bodies.length; j++) {
+                carArray[i].bodies[j].render.fillStyle = '#333'
+            }
+        //    for(j =0;k<ca)
+        
+        }
+
+
+    }
+
+
+
+
+    var hero = carArray[0]
+    for (i = 0; i < 20; i++) {
+        if (carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) {
+            hero = carArray[i]
+        }
+        if (maxXArray[i] < carArray[i].bodies[0].bounds.max.x) {
+            maxXArray[i] = carArray[i].bodies[0].bounds.max.x;
+        }
+    }
+
+
+
+
+    diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 600) / 20
+
+    render.bounds.min.x -= diffx;
+    render.bounds.max.x -= diffx;
+
+    diffy = (render.bounds.min.y - hero.bodies[0].bounds.min.y + 400) / 20
+    render.bounds.min.y -= diffy
+    render.bounds.max.y -= diffy
     // console.log(boxA.position.x);
     // // Update Mouse
     Mouse.setOffset(mouseConstraint.mouse, render.bounds.min);
-    Minimap();
+    Minimap(hero);
 })();
