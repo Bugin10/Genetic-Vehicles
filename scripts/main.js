@@ -32,6 +32,7 @@ var render = Render.create({
         showCollisions: true,
         showConstraints: true,
         showVertexNumber: true,
+        showFps: true
     }
 });
 
@@ -111,69 +112,75 @@ var floorTiles = generateGround();
 
 
 carArray = [];
-for (j = 0; j < 20; j++) {
-    var vertexArray = [];
-    wheelBase = -20,
-        wheelAOffset = 0,
-        wheelBOffset = 0,
-        wheelYOffset = 0,
-        wheelSize = 50;
+function generateCars() {
+    cars = []
+    for (j = 0; j < 20; j++) {
+        var vertexArray = [];
+        wheelBase = -20,
+            wheelAOffset = 0,
+            wheelBOffset = 0,
+            wheelYOffset = 0,
+            wheelSize = 50;
 
-    for (i = 0; i < 15; i++) {
-        vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
+        for (i = 0; i < 15; i++) {
+            vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
+        }
+        vertexArray = Vertices.clockwiseSort(vertexArray);
+        var temp = Bodies.fromVertices(500, 0, vertexArray, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            density: 1,
+            driction: 0.15
+        }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
+        if (temp.vertices.length <= 4) {
+            j--
+            continue
+        }
+
+
+        var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, Math.random() * 60 + 20, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            friction: 0.25,
+            density: 0.9
+        });
+
+        var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            friction: 0.25,
+            density: 0.9
+        });
+
+        var axelA = Constraint.create({
+            bodyA: temp,
+            pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
+            bodyB: wheelA,
+            stiffness: 0.2
+        });
+
+        var axelB = Constraint.create({
+            bodyA: temp,
+            pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
+            bodyB: wheelB,
+            stiffness: 0.2
+        });
+        car = Composite.create();
+        Composite.addBody(car, temp);
+        Composite.addBody(car, wheelA);
+        Composite.addBody(car, wheelB);
+        Composite.addConstraint(car, axelA);
+        Composite.addConstraint(car, axelB);
+        cars[j] = car;
+        World.add(engine.world, car);
     }
-    vertexArray = Vertices.clockwiseSort(vertexArray);
-    var temp = Bodies.fromVertices(500, 0, vertexArray, {
-        collisionFilter: {
-            group: 'ok'
-        },
-        density: 1,
-        driction: 0.15
-    }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
-    if (temp.vertices.length <= 4) {
-        j--
-        continue
-    }
-
-
-    var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, wheelSize, {
-        collisionFilter: {
-            group: 'ok'
-        },
-        friction: 0.25,
-        density: 0.9
-    });
-
-    var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, wheelSize, {
-        collisionFilter: {
-            group: 'ok'
-        },
-        friction: 0.25,
-        density: 0.9
-    });
-
-    var axelA = Constraint.create({
-        bodyA: temp,
-        pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
-        bodyB: wheelA,
-        stiffness: 0.2
-    });
-
-    var axelB = Constraint.create({
-        bodyA: temp,
-        pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
-        bodyB: wheelB,
-        stiffness: 0.2
-    });
-    car = Composite.create();
-    Composite.addBody(car, temp);
-    Composite.addBody(car, wheelA);
-    Composite.addBody(car, wheelB);
-    Composite.addConstraint(car, axelA);
-    Composite.addConstraint(car, axelB);
-    carArray[j] = car;
-    World.add(engine.world, car);
+    return cars
 }
+
+carArray = generateCars()
 
 
 
@@ -245,7 +252,7 @@ function DisplayHealth() {
         cth.lineWidth = 15
 
         cth.moveTo(17 + (h * 15), healthDisplay.height - 10);
-        cth.lineTo(17 + (h * 15), (1000 - carHealth[h]) / 4.2 +1 );
+        cth.lineTo(17 + (h * 15), (1000 - carHealth[h]) / 4.2 + 1);
         cth.stroke();
         cth.closePath();
     }
@@ -307,6 +314,35 @@ function Minimap(hero) {
 }
 
 
+
+
+function endGame() {
+    for (i = 0; i < 20; i++) {
+        carHealth[i] = 1000
+        maxXArray[i] = -100000000000
+        Matter.Composite.clear(carArray[i], [deep = true])
+
+    }
+    console.log(carArray)
+    var tempCars = generateCars()
+    console.log(tempCars)
+    for (i = 0; i < 20; i++) {
+        carArray[i] = tempCars[i]
+    }
+    console.log(carArray)
+    // carArray = generateCars()
+}
+
+
+
+function sleep(miliseconds) {
+    var currentTime = new Date().getTime();
+
+    while (currentTime + miliseconds >= new Date().getTime()) {
+    }
+}
+
+
 (function run() {
 
     window.requestAnimationFrame(run);
@@ -319,9 +355,8 @@ function Minimap(hero) {
     }
 
     for (i = 0; i < 20; i++) {
-        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 4) && (carHealth[i] > 0)) {
+        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 2) && (carHealth[i] > 0)) {
             carHealth[i] -= 3;
-
         }
         else if (carHealth[i] > 0) {
             carHealth[i] = 1000
@@ -343,7 +378,18 @@ function Minimap(hero) {
         if (maxXArray[i] < carArray[i].bodies[0].bounds.max.x) {
             maxXArray[i] = carArray[i].bodies[0].bounds.max.x;
         }
-    
+
+    }
+
+    var allDead = true
+    for (i = 0; i < 20; i++) {
+        if (carHealth[i] > 0) {
+            allDead = false
+        }
+    }
+
+    if (allDead) {
+        endGame()
     }
 
 
