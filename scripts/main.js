@@ -48,14 +48,30 @@ engine.world.bounds.max.x = 100000;
 engine.world.bounds.max.y = 100000;
 
 
+engine.timing.timescale = 0.1;
+engine.positionIterations = 10;
+
 
 World.add(engine.world, mouseConstraint);
 
 
-engine.positionIterations = 10;
 
 
 // create two boxes and a ground
+
+
+
+
+
+
+//Simulation settings
+
+var poolSize = 1;
+
+
+var rankList = []
+
+
 
 
 
@@ -114,7 +130,7 @@ var floorTiles = generateGround();
 carArray = [];
 function generateCars() {
     cars = []
-    for (j = 0; j < 20; j++) {
+    for (j = 0; j < poolSize; j++) {
         var vertexArray = [];
         wheelBase = -20,
             wheelAOffset = 0,
@@ -193,14 +209,14 @@ render.bounds.max.y = carArray[0].bodies[0].bounds.min.y + 400;
 
 maxXArray = [];
 carHealth = []
-currentAlive = 20
-for (i = 0; i < 20; i++) {
+currentAlive = poolSize
+for (i = 0; i < poolSize; i++) {
     maxXArray[i] = -10000000
     carHealth[i] = 1000
 }
 
 
-console.log(carArray[0])
+//console.log(carArray[0])
 // run the engine
 Engine.run(engine);
 // run the renderer
@@ -241,7 +257,7 @@ function DisplayHealth() {
     cth.fill();
 
 
-    for (h = 0; h < 20; h++) {
+    for (h = 0; h < poolSize; h++) {
         if (carHealth[h] <= 0) {
             cth.strokeStyle = 'black'
         }
@@ -277,7 +293,6 @@ function Minimap(hero) {
     ctx.fillRect(hero.bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size - 3, (hero.bodies[0].position.y / 50 + 125) - 3, 5, 5);
     ctx.fillStyle = 'black';
     ctx.closePath();
-
     ctx.beginPath();
     ctx.strokeStyle = 'black';
 
@@ -297,7 +312,7 @@ function Minimap(hero) {
     ctx.stroke();
     ctx.closePath();
 
-    for (h = 0; h < 20; h++) {
+    for (h = 0; h < poolSize; h++) {
         if (carHealth[h] <= 0) {
             ctx.strokeStyle = 'black'
         }
@@ -316,20 +331,21 @@ function Minimap(hero) {
 
 
 
-function endGame() {
-    for (i = 0; i < 20; i++) {
+function endGeneration() {
+
+    for (i = 0; i < poolSize; i++) {
         carHealth[i] = 1000
         maxXArray[i] = -100000000000
         Matter.Composite.clear(carArray[i], [deep = true])
 
     }
-    console.log(carArray)
+    // console.log(carArray)
     var tempCars = generateCars()
-    console.log(tempCars)
-    for (i = 0; i < 20; i++) {
+    // console.log(tempCars)
+    for (i = 0; i < poolSize; i++) {
         carArray[i] = tempCars[i]
     }
-    console.log(carArray)
+    // console.log(carArray)
     // carArray = generateCars()
 }
 
@@ -352,9 +368,10 @@ function sleep(miliseconds) {
             Body.setAngularVelocity(carArray[i].bodies[1], 0.4);
             Body.setAngularVelocity(carArray[i].bodies[2], 0.4);
         }
+        console.log(carArray[i].bodies)
     }
 
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < poolSize; i++) {
         if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 2) && (carHealth[i] > 0)) {
             carHealth[i] -= 3;
         }
@@ -370,8 +387,19 @@ function sleep(miliseconds) {
     }
 
 
+    var allDead = true
+    for (i = 0; i < poolSize; i++) {
+        if (carHealth[i] > 0) {
+            allDead = false
+        }
+    }
+
+    if (allDead) {
+        endGeneration()
+    }
+
     var hero = carArray[0]
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < poolSize; i++) {
         if ((carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             hero = carArray[i]
         }
@@ -381,16 +409,7 @@ function sleep(miliseconds) {
 
     }
 
-    var allDead = true
-    for (i = 0; i < 20; i++) {
-        if (carHealth[i] > 0) {
-            allDead = false
-        }
-    }
 
-    if (allDead) {
-        endGame()
-    }
 
 
     diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 600) / 20
