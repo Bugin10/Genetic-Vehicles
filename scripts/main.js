@@ -16,7 +16,6 @@ var Engine = Matter.Engine,
 
 // create an engine
 var engine = Engine.create();
-
 // create a renderer
 var render = Render.create({
     element: document.body,
@@ -35,168 +34,46 @@ var render = Render.create({
         showFps: true
     }
 });
-
+// add mouse control
 mouseConstraint = MouseConstraint.create(engine, {
     element: render.canvas
 });
 mouseConstraint.constraint.stiffness = 0.01;
 
-
+// define world boundary
 engine.world.bounds.min.x = -100000;
 engine.world.bounds.min.y = -100000;
 engine.world.bounds.max.x = 100000;
 engine.world.bounds.max.y = 100000;
 
+// simulation time settings
 
-engine.timing.timescale = 0.1;
-engine.positionIterations = 10;
-
+// engine.positionIterations = 10;
+// engine.constraintIterations =10;
+// engine.velocityIterations = 10;
 
 World.add(engine.world, mouseConstraint);
 
 
 
+// simulation settings
 
-// create two boxes and a ground
-
-
-
-
-
-
-//Simulation settings
-
-var poolSize = 1;
+var poolSize = 20;
 
 
 var rankList = []
+var carArray = [];
+
+var floorTiles;
+var carArray;
+
+initialise();
 
 
-
-
-
-
-function generateGround() {
-
-    var ground = Bodies.rectangle(200, 400, 80, 20,
-        { isStatic: true, angle: Math.PI * 0.0, friction: 1, chamfer: { radius: 9 }, restitution: 0 });
-    var groundComp = Composite.create();
-
-    if (rand < 0.5) {
-        var pastGroundY = ground.bounds.max.y - 10;
-    }
-    else {
-        var pastGroundY = ground.bounds.min.y + 10;
-    }
-    var previousTileBounds = Vector.create(ground.bounds.max.x, pastGroundY);
-
-
-    var average = 0;
-    floorTiles = [];
-    for (i = 0; i < 500; i++) {
-
-        floorTiles[i] = Composite.create();
-        var nextGroundTile = Bodies.rectangle(previousTileBounds.x + 60, previousTileBounds.y, 150, 20,
-            { isStatic: true, friction: 1, chamfer: { radius: 9 } });
-        Composite.add(floorTiles[i], nextGroundTile);
-
-        var rand = Math.random() * ((i + 0.001) / 125) + (0.5 - (i / 250));
-        if (rand > 1) {
-            rand = 0.9;
-        }
-        if (rand < 0) {
-            rand = 0.1;
-        }
-        Composite.rotate(floorTiles[i], -Math.PI * rand + (Math.PI / 2), { x: nextGroundTile.bounds.min.x, y: nextGroundTile.position.y });
-
-        if (rand < 0.5) {
-            var pastGroundY = nextGroundTile.bounds.max.y - 10;
-        }
-        else {
-            var pastGroundY = nextGroundTile.bounds.min.y + 10;
-        }
-        previousTileBounds.x = nextGroundTile.bounds.max.x;
-        previousTileBounds.y = pastGroundY;
-        average += rand;
-        World.add(engine.world, floorTiles[i]);
-    }
-    return floorTiles;
-
-};
-
-var floorTiles = generateGround();
-
-
-carArray = [];
-function generateCars() {
-    cars = []
-    for (j = 0; j < poolSize; j++) {
-        var vertexArray = [];
-        wheelBase = -20,
-            wheelAOffset = 0,
-            wheelBOffset = 0,
-            wheelYOffset = 0,
-            wheelSize = 50;
-
-        for (i = 0; i < 15; i++) {
-            vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
-        }
-        vertexArray = Vertices.clockwiseSort(vertexArray);
-        var temp = Bodies.fromVertices(500, 0, vertexArray, {
-            collisionFilter: {
-                group: 'ok'
-            },
-            density: 1,
-            driction: 0.15
-        }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
-        if (temp.vertices.length <= 4) {
-            j--
-            continue
-        }
-
-
-        var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, Math.random() * 60 + 20, {
-            collisionFilter: {
-                group: 'ok'
-            },
-            friction: 0.25,
-            density: 0.9
-        });
-
-        var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
-            collisionFilter: {
-                group: 'ok'
-            },
-            friction: 0.25,
-            density: 0.9
-        });
-
-        var axelA = Constraint.create({
-            bodyA: temp,
-            pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
-            bodyB: wheelA,
-            stiffness: 0.2
-        });
-
-        var axelB = Constraint.create({
-            bodyA: temp,
-            pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
-            bodyB: wheelB,
-            stiffness: 0.2
-        });
-        car = Composite.create();
-        Composite.addBody(car, temp);
-        Composite.addBody(car, wheelA);
-        Composite.addBody(car, wheelB);
-        Composite.addConstraint(car, axelA);
-        Composite.addConstraint(car, axelB);
-        cars[j] = car;
-        World.add(engine.world, car);
-    }
-    return cars
+function initialise() {
+    floorTiles = generateGround();
+    carArray = generateCars()
 }
-
-carArray = generateCars()
 
 
 
@@ -240,6 +117,146 @@ healthDisplay.width = 450;
 healthDisplay.height = 250;
 healthDisplay.id = "healthDisplay";
 document.body.appendChild(healthDisplay);
+
+
+
+
+
+
+
+
+
+
+
+// generate a new ground in the world
+// returns an array of floor tiles
+function generateGround() {
+    // create starting tile
+    var ground = Bodies.rectangle(200, 400, 80, 20,
+        { isStatic: true, angle: Math.PI * 0.0, friction: 1, chamfer: { radius: 9 }, restitution: 0 });
+    var groundComp = Composite.create();
+
+    // set ground y offset
+    var pastGroundY = ground.bounds.min.y + 10;
+    var previousTileBounds = Vector.create(ground.bounds.max.x, pastGroundY);
+
+    floorTiles = [];
+    // create 500 new floor tiles
+    for (i = 0; i < 500; i++) {
+        // add tile to ground composite
+        floorTiles[i] = Composite.create();
+        var nextGroundTile = Bodies.rectangle(previousTileBounds.x + 60, previousTileBounds.y, 150, 20,
+            { isStatic: true, friction: 1, chamfer: { radius: 9 } });
+        Composite.add(floorTiles[i], nextGroundTile);
+
+        // prevent ground from being directly vertical
+        var rand = Math.random() * ((i + 0.001) / 125) + (0.5 - (i / 250));
+        if (rand > 1) {
+            rand = 0.9;
+        }
+        if (rand < 0) {
+            rand = 0.1;
+        }
+        // rotate tile
+        Composite.rotate(floorTiles[i], -Math.PI * rand + (Math.PI / 2), { x: nextGroundTile.bounds.min.x, y: nextGroundTile.position.y });
+
+        // set next y offset
+        if (rand < 0.5) {
+            var pastGroundY = nextGroundTile.bounds.max.y - 10;
+        }
+        else {
+            var pastGroundY = nextGroundTile.bounds.min.y + 10;
+        }
+        //set next tile x
+        previousTileBounds.x = nextGroundTile.bounds.max.x;
+        previousTileBounds.y = pastGroundY;
+        World.add(engine.world, floorTiles[i]);
+    }
+    return floorTiles;
+
+};
+
+
+
+// generates new randomised cars
+// returns an array of cars
+function generateCars() {
+    cars = []
+
+    for (j = 0; j < poolSize; j++) {
+        // create car body
+        var vertexArray = [];
+        // random scattering of vertices
+        for (i = 0; i < 15; i++) {
+            vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
+        }
+        // sort vertices in clockwise order
+        vertexArray = Vertices.clockwiseSort(vertexArray);
+        // create body from vertices
+        var temp = Bodies.fromVertices(500, 0, vertexArray, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            density: 1,
+            driction: 0.15,
+            restitution: 0.001
+        }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
+
+        // clunky way of rebuilding a broken car
+        if (temp.vertices.length <= 4) {
+            j--
+            continue
+        }
+
+        // new random located and sized wheels
+        var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, Math.random() * 60 + 20, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            friction: 0.25,
+            density: 0.9
+        });
+
+        var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
+            collisionFilter: {
+                group: 'ok'
+            },
+            friction: 0.25,
+            density: 0.9
+        });
+
+        // axels to join wheels to car
+        var axelA = Constraint.create({
+            bodyA: temp,
+            pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
+            bodyB: wheelA,
+            stiffness: 0.2
+        });
+
+        var axelB = Constraint.create({
+            bodyA: temp,
+            pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
+            bodyB: wheelB,
+            stiffness: 0.2
+        });
+
+        // add body and wheels to a new car composite
+        car = Composite.create();
+        Composite.addBody(car, temp);
+        Composite.addBody(car, wheelA);
+        Composite.addBody(car, wheelB);
+        Composite.addConstraint(car, axelA);
+        Composite.addConstraint(car, axelB);
+        cars[j] = car;
+        World.add(engine.world, car);
+    }
+    return cars
+}
+
+
+
+
+
 
 
 
