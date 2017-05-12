@@ -31,9 +31,11 @@ var render = Render.create({
         showCollisions: true,
         showConstraints: true,
         showVertexNumber: true,
-        showFps: true
+        showFPS: true
     }
 });
+
+
 // add mouse control
 mouseConstraint = MouseConstraint.create(engine, {
     element: render.canvas
@@ -195,15 +197,13 @@ function generateCars() {
         // create body from vertices
         var temp = Bodies.fromVertices(500, 0, vertexArray, {
             collisionFilter: {
-                group: 'ok'
+                group: 'cars'
             },
-            density: 1,
-            driction: 0.15,
-            restitution: 0.001
+            friction: 10
         }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
 
         // clunky way of rebuilding a broken car
-        if (temp.vertices.length <= 4) {
+        if (temp.vertices.length <= 5) {
             j--
             continue
         }
@@ -211,33 +211,31 @@ function generateCars() {
         // new random located and sized wheels
         var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, Math.random() * 60 + 20, {
             collisionFilter: {
-                group: 'ok'
+                group: 'cars'
             },
-            friction: 0.25,
-            density: 0.9
+            friction: 0.25
         });
 
         var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
             collisionFilter: {
-                group: 'ok'
+                group: 'cars'
             },
             friction: 0.25,
-            density: 0.9
         });
 
         // axels to join wheels to car
         var axelA = Constraint.create({
             bodyA: temp,
             pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
-            bodyB: wheelA,
-            stiffness: 0.2
+            bodyB: wheelA
+
         });
 
         var axelB = Constraint.create({
             bodyA: temp,
             pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
-            bodyB: wheelB,
-            stiffness: 0.2
+            bodyB: wheelB
+
         });
 
         // add body and wheels to a new car composite
@@ -385,12 +383,15 @@ function sleep(miliseconds) {
             Body.setAngularVelocity(carArray[i].bodies[1], 0.4);
             Body.setAngularVelocity(carArray[i].bodies[2], 0.4);
         }
-        console.log(carArray[i].bodies)
+        //console.log(carArray[i].bodies)
     }
 
     for (i = 0; i < poolSize; i++) {
-        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 2) && (carHealth[i] > 0)) {
+        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 1) && (carHealth[i] > 0)) {
             carHealth[i] -= 3;
+        }
+        else if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 2.5) && (carHealth[i] > 0)) {
+            carHealth[i] -= 1;
         }
         else if (carHealth[i] > 0) {
             carHealth[i] = 1000
@@ -399,7 +400,10 @@ function sleep(miliseconds) {
         if (carHealth[i] <= 0) {
             for (j = 0; j < carArray[i].bodies.length; j++) {
                 carArray[i].bodies[j].render.fillStyle = '#333'
+                Body.setAngularVelocity(carArray[i].bodies[1], 0);
+                Body.setAngularVelocity(carArray[i].bodies[2], 0);
             }
+            carHealth[i]=0;
         }
     }
 
