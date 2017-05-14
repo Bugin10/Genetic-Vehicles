@@ -112,7 +112,7 @@ var Axes = _dereq_('../geometry/Axes');
                     xOffset: 0,
                     yOffset: 0
                 },
-                lineWidth: 0
+                lineWidth: 5
             }
         };
 
@@ -184,7 +184,7 @@ var Axes = _dereq_('../geometry/Axes');
         });
 
         // render properties
-        var defaultFillStyle = (body.isStatic ? '#2e2b44' : Common.choose(['#006BA6', '#0496FF', '#FFBC42', '#D81159', '#8F2D56'])),
+        var defaultFillStyle = (body.isStatic ? '#eeeeee' : Common.choose(['#ffa64d', '#4ECDC4', '#C7F464', '#FF6B6B', '#C44D58', '#ffff80'])),
             defaultStrokeStyle = Common.shadeColor(defaultFillStyle, -20);
         body.render.fillStyle = body.render.fillStyle || defaultFillStyle;
         body.render.strokeStyle = body.render.strokeStyle || defaultStrokeStyle;

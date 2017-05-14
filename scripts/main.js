@@ -24,15 +24,16 @@ var render = Render.create({
         showAngleIndicator: false,
         showShadows: true,
         wireframes: false,
-        width: 1400,
-        height: 800,
+        width: 800,
+        height: 400,
         hasBounds: true,
         showBounds: false,
         showCollisions: true,
         showConstraints: true,
         showVertexNumber: true,
         showPositions: false,
-        showFPS: true
+        showFPS: true,
+        background: '#fafafa'
     }
 });
 
@@ -82,8 +83,8 @@ function initialise() {
 
 
 // ------------------------- Initialisation--------------------------//
-render.bounds.min.x = carArray[0].bodies[0].bounds.min.x - 700;
-render.bounds.max.x = carArray[0].bodies[0].bounds.min.x + 700;
+render.bounds.min.x = carArray[0].bodies[0].bounds.min.x - 800;
+render.bounds.max.x = carArray[0].bodies[0].bounds.min.x + 800;
 
 render.bounds.min.y = carArray[0].bodies[0].bounds.min.y - 400;
 render.bounds.max.y = carArray[0].bodies[0].bounds.min.y + 400;
@@ -146,7 +147,7 @@ function generateGround() {
 
     floorTiles = [];
     // create 500 new floor tiles
-    for (i = 0; i < 500; i++) {
+    for (i = 0; i < 250; i++) {
         // add tile to ground composite
         floorTiles[i] = Composite.create();
         var nextGroundTile = Bodies.rectangle(previousTileBounds.x + 60, previousTileBounds.y, 150, 20,
@@ -200,7 +201,8 @@ function generateSingleCar() {
         collisionFilter: {
             group: 'cars'
         },
-        friction: 10
+        friction: 10,
+        mass: 10
     }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
 
     // clunky way of rebuilding a broken car
@@ -214,28 +216,32 @@ function generateSingleCar() {
         collisionFilter: {
             group: 'cars'
         },
-        friction: 0.25
+        friction: 0.2,
+        mass: 10
     });
 
     var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
         collisionFilter: {
             group: 'cars'
         },
-        friction: 0.25,
+        friction: 0.2,
+        mass: 10
     });
 
     // axels to join wheels to car
     var axelA = Constraint.create({
         bodyA: temp,
         pointA: { x: - temp.position.x + wheelA.position.x, y: - temp.position.y + wheelA.position.y },
-        bodyB: wheelA
+        bodyB: wheelA,
+        stiffness: 0.3
 
     });
 
     var axelB = Constraint.create({
         bodyA: temp,
         pointA: { x: - temp.position.x + wheelB.position.x, y: - temp.position.y + wheelB.position.y },
-        bodyB: wheelB
+        bodyB: wheelB,
+        stiffness: 0.3
 
     });
 
@@ -311,13 +317,13 @@ function Minimap(hero) {
     ctx.fill();
 
     ctx.fillStyle = 'red';
-    ctx.fillRect(hero.bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size - 3, (hero.bodies[0].position.y / 50 + 125) - 3, 5, 5);
+    ctx.fillRect(hero.bodies[0].position.x / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size - 3, (hero.bodies[0].position.y / 50 + 125) - 3, 5, 5);
     ctx.fillStyle = 'black';
     ctx.closePath();
     ctx.beginPath();
     ctx.strokeStyle = 'black';
 
-    for (i = 0; i < 500; i++) {
+    for (i = 0; i < floorTiles.length - 1; i++) {
         if (floorTiles[i].bodies[0].angle > Math.pi) {
             var tileRighty = floorTiles[i].bodies[0].bounds.max.y;
             var tileLefty = floorTiles[i].bodies[0].bounds.min.y;
@@ -327,7 +333,7 @@ function Minimap(hero) {
             var tileLefty = floorTiles[i].bodies[0].bounds.max.y;
         }
 
-        ctx.lineTo(floorTiles[i].bodies[0].bounds.min.x / floorTiles[499].bodies[0].bounds.max.x * size, floorTiles[i].bodies[0].bounds.min.y / 50 + 125);
+        ctx.lineTo(floorTiles[i].bodies[0].bounds.min.x / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size, floorTiles[i].bodies[0].bounds.min.y / 50 + 125);
 
     }
     ctx.stroke();
@@ -342,14 +348,14 @@ function Minimap(hero) {
         }
         ctx.beginPath();
         if (carHealth[h] > 0) {
-            ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 1);
-            ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 240);
+            ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size, 1);
+            ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size, 240);
             ctx.stroke();
             ctx.closePath();
         }
         else {
-            ctx.moveTo(maxXArray[h] / floorTiles[499].bodies[0].bounds.max.x * size, 1);
-            ctx.lineTo(maxXArray[h] / floorTiles[499].bodies[0].bounds.max.x * size, 240);
+            ctx.moveTo(maxXArray[h] / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size, 1);
+            ctx.lineTo(maxXArray[h] / floorTiles[floorTiles.length - 1].bodies[0].bounds.max.x * size, 240);
             ctx.stroke();
             ctx.closePath();
         }
@@ -412,23 +418,27 @@ function sleep(miliseconds) {
 
         if (carHealth[i] <= 0) {
             for (j = 0; j < carArray[i].bodies.length; j++) {
-                carArray[i].bodies[j].render.fillStyle = '#333'
+                for (h = 0; h < carArray[i].bodies[j].parts.length; h++) {
+                    if (h==0)
+                    {
+                         carArray[i].bodies[j].parts[h].render.fillStyle = 'pink';
+                    }
+                    carArray[i].bodies[j].parts[h].render.fillStyle = '#333';
+                }
+                carArray[i].bodies[j].render.fillStyle = '#333';
                 Body.setAngularVelocity(carArray[i].bodies[1], 0);
                 Body.setAngularVelocity(carArray[i].bodies[2], 0);
             }
             carHealth[i] = 0;
         }
-    }
 
-    for (i = 0; i < poolSize; i++) {
-        if (carArray[i].bodies[0].angularVelocity > 0.25) {
-            carHealth[i] = -1;
+        if (carArray[i].bodies[0].speed > 50) {
+            carHealth[i] = 0;
             Composite.removeConstraint(carArray[i], carArray[i].constraints[0], [deep = true]);
             Composite.removeConstraint(carArray[i], carArray[i].constraints[1], [deep = true]);
-
         }
-
     }
+
 
     var allDead = true
     for (i = 0; i < poolSize; i++) {
@@ -441,7 +451,15 @@ function sleep(miliseconds) {
         endGeneration()
     }
 
-    var hero = carArray[0]
+    var hero = carArray[0];
+    for(i=0;i<poolSize;i++)
+    {
+        if(carHealth[i] > 0)
+        {
+            hero = carArray[i];
+            break;
+        }
+    }
     for (i = 0; i < poolSize; i++) {
         if ((carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             hero = carArray[i]
@@ -455,7 +473,7 @@ function sleep(miliseconds) {
 
 
 
-    diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 600) / 20
+    diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 800) / 20
 
     render.bounds.min.x -= diffx;
     render.bounds.max.x -= diffx;
@@ -465,6 +483,7 @@ function sleep(miliseconds) {
     render.bounds.max.y -= diffy
     // console.log(boxA.position.x);
     // // Update Mouse
+    Mouse.setScale(mouseConstraint.mouse, { x: 2, y: 2 });
     Mouse.setOffset(mouseConstraint.mouse, render.bounds.min);
     Minimap(hero);
     DisplayHealth();
