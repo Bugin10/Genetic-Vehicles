@@ -31,6 +31,7 @@ var render = Render.create({
         showCollisions: true,
         showConstraints: true,
         showVertexNumber: true,
+        showPositions: false,
         showFPS: true
     }
 });
@@ -50,9 +51,11 @@ engine.world.bounds.max.y = 100000;
 
 // simulation time settings
 
-// engine.positionIterations = 10;
-// engine.constraintIterations =10;
-// engine.velocityIterations = 10;
+// engine.positionIterations = 100;
+// engine.constraintIterations = 100;
+// engine.velocityIterations = 100;
+
+engine.timing.timeScale = 1;
 
 World.add(engine.world, mouseConstraint);
 
@@ -67,7 +70,6 @@ var rankList = []
 var carArray = [];
 
 var floorTiles;
-var carArray;
 
 initialise();
 
@@ -134,7 +136,7 @@ document.body.appendChild(healthDisplay);
 // returns an array of floor tiles
 function generateGround() {
     // create starting tile
-    var ground = Bodies.rectangle(200, 400, 80, 20,
+    var ground = Bodies.rectangle(-100, 400, 80, 20,
         { isStatic: true, angle: Math.PI * 0.0, friction: 1, chamfer: { radius: 9 }, restitution: 0 });
     var groundComp = Composite.create();
 
@@ -182,71 +184,76 @@ function generateGround() {
 
 // generates new randomised cars
 // returns an array of cars
+function generateSingleCar() {
+    // create car body
+    var vertexArray = [];
+    // random scattering of vertices
+    for (i = 0; i < 15; i++) {
+        vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
+    }
+    // sort vertices in clockwise order
+    vertexArray = Vertices.clockwiseSort(vertexArray);
+
+    // vertexArray = Vertices.fromPath('100 0 75 50 100 100 25 100 0 50 25 0');
+    // create body from vertices
+    var temp = Bodies.fromVertices(300, 0, vertexArray, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 10
+    }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
+
+    // clunky way of rebuilding a broken car
+    if (temp.vertices.length <= 5) {
+        j--
+        return generateSingleCar();
+    }
+
+    // new random located and sized wheels
+    var wheelA = Bodies.circle(temp.vertices[3].x, temp.vertices[3].y, Math.random() * 60 + 20, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 0.25
+    });
+
+    var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 0.25,
+    });
+
+    // axels to join wheels to car
+    var axelA = Constraint.create({
+        bodyA: temp,
+        pointA: { x: - temp.position.x + wheelA.position.x, y: - temp.position.y + wheelA.position.y },
+        bodyB: wheelA
+
+    });
+
+    var axelB = Constraint.create({
+        bodyA: temp,
+        pointA: { x: - temp.position.x + wheelB.position.x, y: - temp.position.y + wheelB.position.y },
+        bodyB: wheelB
+
+    });
+
+    // add body and wheels to a new car composite
+    car = Composite.create();
+    Composite.addBody(car, temp);
+    Composite.addBody(car, wheelA);
+    Composite.addBody(car, wheelB);
+    Composite.addConstraint(car, axelA);
+    Composite.addConstraint(car, axelB);
+    World.add(engine.world, car);
+    return car;
+}
 function generateCars() {
     cars = []
 
     for (j = 0; j < poolSize; j++) {
-        // create car body
-        var vertexArray = [];
-        // random scattering of vertices
-        for (i = 0; i < 15; i++) {
-            vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
-        }
-        // sort vertices in clockwise order
-        vertexArray = Vertices.clockwiseSort(vertexArray);
-        // create body from vertices
-        var temp = Bodies.fromVertices(500, 0, vertexArray, {
-            collisionFilter: {
-                group: 'cars'
-            },
-            friction: 10
-        }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
-
-        // clunky way of rebuilding a broken car
-        if (temp.vertices.length <= 5) {
-            j--
-            continue
-        }
-
-        // new random located and sized wheels
-        var wheelA = Bodies.circle(temp.vertices[4].x, temp.vertices[4].y, Math.random() * 60 + 20, {
-            collisionFilter: {
-                group: 'cars'
-            },
-            friction: 0.25
-        });
-
-        var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
-            collisionFilter: {
-                group: 'cars'
-            },
-            friction: 0.25,
-        });
-
-        // axels to join wheels to car
-        var axelA = Constraint.create({
-            bodyA: temp,
-            pointA: { x: - temp.position.x + temp.vertices[4].x, y: - temp.position.y + temp.vertices[4].y },
-            bodyB: wheelA
-
-        });
-
-        var axelB = Constraint.create({
-            bodyA: temp,
-            pointA: { x: - temp.position.x + temp.vertices[0].x, y: - temp.position.y + temp.vertices[0].y },
-            bodyB: wheelB
-
-        });
-
-        // add body and wheels to a new car composite
-        car = Composite.create();
-        Composite.addBody(car, temp);
-        Composite.addBody(car, wheelA);
-        Composite.addBody(car, wheelB);
-        Composite.addConstraint(car, axelA);
-        Composite.addConstraint(car, axelB);
-        cars[j] = car;
-        World.add(engine.world, car);
+        cars[j] = generateSingleCar();
     }
     return cars
 }
@@ -291,7 +298,6 @@ function DisplayHealth() {
 
 
 function Minimap(hero) {
-    //  var ctx = document.getElementById("minimapCanvas").getContext("2d");
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'black';
     ctx.beginPath();
@@ -335,11 +341,18 @@ function Minimap(hero) {
             ctx.strokeStyle = 'gold'
         }
         ctx.beginPath();
-
-        ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 1);
-        ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 240);
-        ctx.stroke();
-        ctx.closePath();
+        if (carHealth[h] > 0) {
+            ctx.moveTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 1);
+            ctx.lineTo(carArray[h].bodies[0].position.x / floorTiles[499].bodies[0].bounds.max.x * size, 240);
+            ctx.stroke();
+            ctx.closePath();
+        }
+        else {
+            ctx.moveTo(maxXArray[h] / floorTiles[499].bodies[0].bounds.max.x * size, 1);
+            ctx.lineTo(maxXArray[h] / floorTiles[499].bodies[0].bounds.max.x * size, 240);
+            ctx.stroke();
+            ctx.closePath();
+        }
     }
 }
 
@@ -387,11 +400,11 @@ function sleep(miliseconds) {
     }
 
     for (i = 0; i < poolSize; i++) {
-        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 1) && (carHealth[i] > 0)) {
-            carHealth[i] -= 3;
+        if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + (1.5 * engine.timing.timeScale)) && (carHealth[i] > 0)) {
+            carHealth[i] -= 3 * engine.timing.timeScale;
         }
-        else if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + 2.5) && (carHealth[i] > 0)) {
-            carHealth[i] -= 1;
+        else if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + (3.5 * engine.timing.timeScale)) && (carHealth[i] > 0)) {
+            carHealth[i] -= 1 * engine.timing.timeScale;
         }
         else if (carHealth[i] > 0) {
             carHealth[i] = 1000
@@ -403,10 +416,19 @@ function sleep(miliseconds) {
                 Body.setAngularVelocity(carArray[i].bodies[1], 0);
                 Body.setAngularVelocity(carArray[i].bodies[2], 0);
             }
-            carHealth[i]=0;
+            carHealth[i] = 0;
         }
     }
 
+    for (i = 0; i < poolSize; i++) {
+        if (carArray[i].bodies[0].angularVelocity > 0.25) {
+            carHealth[i] = -1;
+            Composite.removeConstraint(carArray[i], carArray[i].constraints[0], [deep = true]);
+            Composite.removeConstraint(carArray[i], carArray[i].constraints[1], [deep = true]);
+
+        }
+
+    }
 
     var allDead = true
     for (i = 0; i < poolSize; i++) {
@@ -424,7 +446,7 @@ function sleep(miliseconds) {
         if ((carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             hero = carArray[i]
         }
-        if (maxXArray[i] < carArray[i].bodies[0].bounds.max.x) {
+        if ((maxXArray[i] < carArray[i].bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             maxXArray[i] = carArray[i].bodies[0].bounds.max.x;
         }
 
