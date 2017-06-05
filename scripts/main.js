@@ -43,6 +43,8 @@ mouseConstraint = MouseConstraint.create(engine, {
     element: render.canvas
 });
 mouseConstraint.constraint.stiffness = 0.01;
+World.add(engine.world, mouseConstraint);
+
 
 // define world boundary
 engine.world.bounds.min.x = -100000;
@@ -58,78 +60,65 @@ engine.world.bounds.max.y = 100000;
 
 engine.timing.timeScale = 1;
 
-World.add(engine.world, mouseConstraint);
+
 
 
 
 // simulation settings
 
 var poolSize = 20;
+var heroCount = 3;
+var generationHeroes = [];
 
 
+// object arrays
 var rankList = []
 var carArray = [];
-
+var maxXArray = [];
+var carHealth = []
 var floorTiles;
+var ctx;
+var cth;
 
+// initialise simulation
 initialise();
-
-
 function initialise() {
     floorTiles = generateGround();
     carArray = generateCars()
-}
+    render.bounds.min.x = carArray[0].bodies[0].bounds.min.x - 800;
+    render.bounds.max.x = carArray[0].bodies[0].bounds.min.x + 800;
+    render.bounds.min.y = carArray[0].bodies[0].bounds.min.y - 400;
+    render.bounds.max.y = carArray[0].bodies[0].bounds.min.y + 400;
 
+    currentAlive = poolSize
+    for (i = 0; i < poolSize; i++) {
+        maxXArray[i] = -10000000
+        carHealth[i] = 1000
+    }
 
+    // create display elements
+    linebreak = document.createElement("br");
+    document.body.appendChild(linebreak);
 
-// ------------------------- Initialisation--------------------------//
-render.bounds.min.x = carArray[0].bodies[0].bounds.min.x - 800;
-render.bounds.max.x = carArray[0].bodies[0].bounds.min.x + 800;
-
-render.bounds.min.y = carArray[0].bodies[0].bounds.min.y - 400;
-render.bounds.max.y = carArray[0].bodies[0].bounds.min.y + 400;
-
-maxXArray = [];
-carHealth = []
-currentAlive = poolSize
-for (i = 0; i < poolSize; i++) {
-    maxXArray[i] = -10000000
-    carHealth[i] = 1000
-}
-
-
-//console.log(carArray[0])
-// run the engine
-Engine.run(engine);
-// run the renderer
-Render.run(render);
-
-linebreak = document.createElement("br");
-document.body.appendChild(linebreak);
-
-var minimapCanvas = document.createElement('canvas'),
+    var minimapCanvas = document.createElement('canvas');
     ctx = minimapCanvas.getContext('2d');
-minimapCanvas.width = 450;
-minimapCanvas.height = 250;
-minimapCanvas.id = "minimapCanvas";
-document.body.appendChild(minimapCanvas);
+    minimapCanvas.width = 450;
+    minimapCanvas.height = 250;
+    minimapCanvas.id = "minimapCanvas";
+    document.body.appendChild(minimapCanvas);
 
-
-
-var healthDisplay = document.createElement('canvas'),
+    var healthDisplay = document.createElement('canvas');
     cth = healthDisplay.getContext('2d');
-healthDisplay.width = 450;
-healthDisplay.height = 250;
-healthDisplay.id = "healthDisplay";
-document.body.appendChild(healthDisplay);
+    healthDisplay.width = 450;
+    healthDisplay.height = 250;
+    healthDisplay.id = "healthDisplay";
+    document.body.appendChild(healthDisplay);
 
-
-
-
-
-
-
-
+    // run the engine
+    Engine.run(engine);
+    // run the renderer
+    Render.run(render);
+}
 
 
 
@@ -146,7 +135,7 @@ function generateGround() {
     var previousTileBounds = Vector.create(ground.bounds.max.x, pastGroundY);
 
     floorTiles = [];
-    // create 500 new floor tiles
+    // create 250 new floor tiles
     for (i = 0; i < 250; i++) {
         // add tile to ground composite
         floorTiles[i] = Composite.create();
@@ -178,13 +167,12 @@ function generateGround() {
         World.add(engine.world, floorTiles[i]);
     }
     return floorTiles;
-
 };
 
 
 
-// generates new randomised cars
-// returns an array of cars
+// generates new randomised car
+// returns an array of car
 function generateSingleCar() {
     // create car body
     var vertexArray = [];
@@ -255,9 +243,10 @@ function generateSingleCar() {
     World.add(engine.world, car);
     return car;
 }
+
+// generate array of cars
 function generateCars() {
     cars = []
-
     for (j = 0; j < poolSize; j++) {
         cars[j] = generateSingleCar();
     }
@@ -267,10 +256,108 @@ function generateCars() {
 
 
 
+// generates new genetic car
+// returns an array of car
+function evolveCar() {
+    // create car body
+    var vertexArray = [];
+    // random scattering of vertices
+    for (i = 0; i < 15; i++) {
+        vertexArray[i] = Vector.create(Math.random() * 200, Math.random() * 200);
+    }
+    // sort vertices in clockwise order
+    vertexArray = Vertices.clockwiseSort(vertexArray);
+
+    // vertexArray = Vertices.fromPath('100 0 75 50 100 100 25 100 0 50 25 0');
+    // create body from vertices
+    var temp = Bodies.fromVertices(300, 0, vertexArray, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 10,
+        mass: 10
+    }, [flagInternal = false], [removeCollinear = 0.01], [minimumArea = 100]);
+
+    // clunky way of rebuilding a broken car
+    if (temp.vertices.length <= 5) {
+        j--
+        return evolveCar();
+    }
+
+    // new random located and sized wheels
+    var wheelA = Bodies.circle(temp.vertices[3].x, temp.vertices[3].y, Math.random() * 60 + 20, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 0.2,
+        mass: 10
+    });
+
+    var wheelB = Bodies.circle(temp.vertices[0].x, temp.vertices[0].y, Math.random() * 60 + 20, {
+        collisionFilter: {
+            group: 'cars'
+        },
+        friction: 0.2,
+        mass: 10
+    });
+
+    // axels to join wheels to car
+    var axelA = Constraint.create({
+        bodyA: temp,
+        pointA: { x: - temp.position.x + wheelA.position.x, y: - temp.position.y + wheelA.position.y },
+        bodyB: wheelA,
+        stiffness: 0.3
+
+    });
+
+    var axelB = Constraint.create({
+        bodyA: temp,
+        pointA: { x: - temp.position.x + wheelB.position.x, y: - temp.position.y + wheelB.position.y },
+        bodyB: wheelB,
+        stiffness: 0.3
+
+    });
+
+    // add body and wheels to a new car composite
+    car = Composite.create();
+    Composite.addBody(car, temp);
+    Composite.addBody(car, wheelA);
+    Composite.addBody(car, wheelB);
+    Composite.addConstraint(car, axelA);
+    Composite.addConstraint(car, axelB);
+    World.add(engine.world, car);
+    return car;
+}
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// draw the health display
 function DisplayHealth() {
     cth.lineWidth = 1;
     cth.strokeStyle = 'black';
@@ -284,7 +371,7 @@ function DisplayHealth() {
     cth.stroke();
     cth.fill();
 
-
+    // for each car draw their health as a green bar    
     for (h = 0; h < poolSize; h++) {
         if (carHealth[h] <= 0) {
             cth.strokeStyle = 'black'
@@ -294,7 +381,6 @@ function DisplayHealth() {
         }
         cth.beginPath();
         cth.lineWidth = 15
-
         cth.moveTo(17 + (h * 15), healthDisplay.height - 10);
         cth.lineTo(17 + (h * 15), (1000 - carHealth[h]) / 4.2 + 1);
         cth.stroke();
@@ -302,7 +388,9 @@ function DisplayHealth() {
     }
 }
 
-
+// draw the minimap containing the floor and x position of each car
+// draw a red square on top of the leading car
+// blakc lines for a dead car, yellow for alive
 function Minimap(hero) {
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'black';
@@ -322,7 +410,7 @@ function Minimap(hero) {
     ctx.closePath();
     ctx.beginPath();
     ctx.strokeStyle = 'black';
-
+    // draw floor into minimap
     for (i = 0; i < floorTiles.length - 1; i++) {
         if (floorTiles[i].bodies[0].angle > Math.pi) {
             var tileRighty = floorTiles[i].bodies[0].bounds.max.y;
@@ -338,7 +426,7 @@ function Minimap(hero) {
     }
     ctx.stroke();
     ctx.closePath();
-
+    //draw each car as a vertical line representing its x position
     for (h = 0; h < poolSize; h++) {
         if (carHealth[h] <= 0) {
             ctx.strokeStyle = 'black'
@@ -363,65 +451,62 @@ function Minimap(hero) {
 }
 
 
-
-
+// reset the car health, max positions and destroy the Composite
 function endGeneration() {
-
     for (i = 0; i < poolSize; i++) {
         carHealth[i] = 1000
         maxXArray[i] = -100000000000
         Matter.Composite.clear(carArray[i], [deep = true])
-
     }
-    // console.log(carArray)
+
+}
+
+
+
+function nextGeneration() {
+    // create new generation of cars
     var tempCars = generateCars()
-    // console.log(tempCars)
     for (i = 0; i < poolSize; i++) {
         carArray[i] = tempCars[i]
     }
-    // console.log(carArray)
-    // carArray = generateCars()
 }
 
 
 
-function sleep(miliseconds) {
-    var currentTime = new Date().getTime();
 
-    while (currentTime + miliseconds >= new Date().getTime()) {
-    }
-}
-
-
+// main simulation loop
 (function run() {
 
     window.requestAnimationFrame(run);
 
+    // turn each cars wheels
     for (i = 0; i < carArray.length; i++) {
         if (carHealth[i] > 0) {
             Body.setAngularVelocity(carArray[i].bodies[1], 0.4);
             Body.setAngularVelocity(carArray[i].bodies[2], 0.4);
         }
-        //console.log(carArray[i].bodies)
     }
 
+    // reduce a cars health if it is not moving fast enough
     for (i = 0; i < poolSize; i++) {
+        // low movement kill faster
         if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + (1.5 * engine.timing.timeScale)) && (carHealth[i] > 0)) {
             carHealth[i] -= 3 * engine.timing.timeScale;
         }
+        // moderate movement kill slower
         else if ((carArray[i].bodies[0].bounds.max.x < maxXArray[i] + (3.5 * engine.timing.timeScale)) && (carHealth[i] > 0)) {
             carHealth[i] -= 1 * engine.timing.timeScale;
         }
+        // otherwise reset car health
         else if (carHealth[i] > 0) {
             carHealth[i] = 1000
         }
-
+        // if a car health is =< 0 change its colour and stop its movement
         if (carHealth[i] <= 0) {
             for (j = 0; j < carArray[i].bodies.length; j++) {
                 for (h = 0; h < carArray[i].bodies[j].parts.length; h++) {
-                    if (h==0)
-                    {
-                         carArray[i].bodies[j].parts[h].render.fillStyle = 'pink';
+                    if (h == 0) {
+                        carArray[i].bodies[j].parts[h].render.fillStyle = 'pink';
                     }
                     carArray[i].bodies[j].parts[h].render.fillStyle = '#333';
                 }
@@ -431,7 +516,7 @@ function sleep(miliseconds) {
             }
             carHealth[i] = 0;
         }
-
+        // if a car is experiencing extreme force, kill it and remove its wheels
         if (carArray[i].bodies[0].speed > 50) {
             carHealth[i] = 0;
             Composite.removeConstraint(carArray[i], carArray[i].constraints[0], [deep = true]);
@@ -439,27 +524,46 @@ function sleep(miliseconds) {
         }
     }
 
-
+    // check if the generation has died
     var allDead = true
     for (i = 0; i < poolSize; i++) {
         if (carHealth[i] > 0) {
             allDead = false
         }
     }
-
+    // end generation if no cars alive
     if (allDead) {
+        var list = []
+        for (i = 0; i < poolSize; i++) {
+            list.push({ 'car': carArray[i], 'maxX': maxXArray[i] });
+        }
+
+        list.sort(function (a, b) {
+            return ((a.maxX < b.maxX) ? -1 : ((a.maxX == b.maxX) ? 0 : 1));
+        });
+        for (i = 0; i < heroCount; i++)
+        {
+            generationHeroes.push( list[i].car);
+        }
+
+
+               
+
         endGeneration()
+        nextGeneration()
     }
 
+
+    // set the hero of the population
+    // need to find an initial alive car to use to compare
     var hero = carArray[0];
-    for(i=0;i<poolSize;i++)
-    {
-        if(carHealth[i] > 0)
-        {
+    for (i = 0; i < poolSize; i++) {
+        if (carHealth[i] > 0) {
             hero = carArray[i];
             break;
         }
     }
+    // determine population hero
     for (i = 0; i < poolSize; i++) {
         if ((carArray[i].bodies[0].bounds.max.x > hero.bodies[0].bounds.max.x) && (carHealth[i] > 0)) {
             hero = carArray[i]
@@ -470,21 +574,19 @@ function sleep(miliseconds) {
 
     }
 
-
-
-
+    // smooth camera switching between cars    
     diffx = (render.bounds.min.x - hero.bodies[0].bounds.min.x + 800) / 20
-
     render.bounds.min.x -= diffx;
     render.bounds.max.x -= diffx;
-
     diffy = (render.bounds.min.y - hero.bodies[0].bounds.min.y + 400) / 20
     render.bounds.min.y -= diffy
     render.bounds.max.y -= diffy
-    // console.log(boxA.position.x);
-    // // Update Mouse
+
+    // Update Mouse constraint and bounds
     Mouse.setScale(mouseConstraint.mouse, { x: 2, y: 2 });
     Mouse.setOffset(mouseConstraint.mouse, render.bounds.min);
+
+    // draw the minimap and health display
     Minimap(hero);
     DisplayHealth();
 })();
